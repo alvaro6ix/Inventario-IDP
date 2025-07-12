@@ -4,8 +4,11 @@ FROM node:18 AS node-builder
 WORKDIR /app
 
 COPY package*.json ./
+
 RUN npm install
+
 COPY . .
+
 RUN npm run build
 
 # Stage 2: Servidor PHP con Apache
@@ -23,23 +26,19 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo_mysql zip
 
+# Habilita mod_rewrite
 RUN a2enmod rewrite
 
-# Instalar composer globalmente
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Cambia DocumentRoot a /var/www/html/public
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
 
-WORKDIR /var/www/html
+COPY . /var/www/html
 
-# Copiar archivos PHP/Laravel
-COPY . .
-
-# Instalar dependencias PHP con composer
-RUN composer install --no-dev --optimize-autoloader
-
-# Copiar los assets compilados de Node
 COPY --from=node-builder /app/public/build /var/www/html/public/build
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Permisos correctos para storage y cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
 
