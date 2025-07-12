@@ -3,22 +3,14 @@ FROM node:18 AS node-builder
 
 WORKDIR /app
 
-# Copia archivos de dependencias front
 COPY package*.json ./
-
-# Instala dependencias Node
 RUN npm install
-
-# Copia el resto del código front y Laravel (si tienes todo junto)
 COPY . .
-
-# Compila los assets para producción
 RUN npm run build
 
 # Stage 2: Servidor PHP con Apache
 FROM php:8.2-apache
 
-# Instala extensiones y dependencias necesarias para Laravel
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -31,23 +23,24 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo_mysql zip
 
-# Habilita mod_rewrite de apache para Laravel
 RUN a2enmod rewrite
 
-# Cambiar DocumentRoot a /var/www/html/public para Laravel
-RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+# Instalar composer globalmente
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copia el código PHP/Laravel al contenedor
-COPY . /var/www/html
+WORKDIR /var/www/html
 
-# Copia los assets compilados de Node a la carpeta pública
+# Copiar archivos PHP/Laravel
+COPY . .
+
+# Instalar dependencias PHP con composer
+RUN composer install --no-dev --optimize-autoloader
+
+# Copiar los assets compilados de Node
 COPY --from=node-builder /app/public/build /var/www/html/public/build
 
-# Da permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expone puerto 80
 EXPOSE 80
 
-# Comando para arrancar apache en primer plano
 CMD ["apache2-foreground"]
