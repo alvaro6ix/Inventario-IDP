@@ -34,6 +34,9 @@ RUN apt-get update && apt-get install -y \
 # Habilita mod_rewrite de apache para Laravel
 RUN a2enmod rewrite
 
+# Cambiar DocumentRoot a /var/www/html/public para Laravel
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+
 # Copia el código PHP/Laravel al contenedor
 COPY . /var/www/html
 
