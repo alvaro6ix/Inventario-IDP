@@ -1,43 +1,50 @@
+# Stage 1: Build assets con Node
+FROM node:18 AS node-builder
+
+WORKDIR /app
+
+# Copia archivos de dependencias front
+COPY package*.json ./
+
+# Instala dependencias Node
+RUN npm install
+
+# Copia el resto del código front y Laravel (si tienes todo junto)
+COPY . .
+
+# Compila los assets para producción
+RUN npm run build
+
+# Stage 2: Servidor PHP con Apache
 FROM php:8.2-apache
 
-# Instalar dependencias del sistema
+# Instala extensiones y dependencias necesarias para Laravel
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     zip \
+    git \
     unzip \
     libzip-dev \
-    git \
     curl \
-    pkg-config \
-    libonig-dev \
-    libxml2-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip mbstring xml
+    && docker-php-ext-install gd pdo_mysql zip
 
-# Habilitar mod_rewrite de Apache
+# Habilita mod_rewrite de apache para Laravel
 RUN a2enmod rewrite
 
-# Copiar la configuración personalizada de Apache
-COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+# Copia el código PHP/Laravel al contenedor
+COPY . /var/www/html
 
-# Copiar el código fuente al contenedor
-COPY . /var/www/html/
+# Copia los assets compilados de Node a la carpeta pública
+COPY --from=node-builder /app/public/build /var/www/html/public/build
 
-# Dar permisos correctos para storage y cache
+# Da permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Establecer el directorio de trabajo
-WORKDIR /var/www/html
-
-# Instalar Composer y dependencias PHP
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN composer install --optimize-autoloader --no-dev --no-interaction
-
-# Exponer puerto 80
+# Expone puerto 80
 EXPOSE 80
 
-# Comando para iniciar Apache en primer plano
+# Comando para arrancar apache en primer plano
 CMD ["apache2-foreground"]
