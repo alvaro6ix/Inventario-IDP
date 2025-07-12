@@ -10,6 +10,9 @@ Route::get('/ver-logs', function () {
     $logs = file_get_contents($logPath);
     return nl2br(e($logs));
 });
+Route::get('inventarios/exportExcel', function() {
+    return 'Exportar Excel - ruta temporal.';
+})->name('inventarios.exportExcel');
 
 
 // Ruta para la página de bienvenida (puedes cambiarla si es necesario)
