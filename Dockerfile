@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Instala dependencias necesarias y la extensión gd
+# Instalar dependencias necesarias y extensiones PHP
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -11,27 +11,30 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql zip
 
-
-# Habilita mod_rewrite de Apache (necesario para Laravel)
+# Habilitar mod_rewrite (necesario para Laravel)
 RUN a2enmod rewrite
 
-# Copia el código fuente al contenedor
+# Copiar configuración personalizada de Apache para servir desde /public
+COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+RUN a2dissite 000-default.conf && a2ensite 000-default.conf
+
+# Copiar el proyecto Laravel al contenedor
 COPY . /var/www/html/
 
-# Establece el directorio de trabajo
+# Establecer el directorio de trabajo
 WORKDIR /var/www/html/
 
-# Instala Composer
+# Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Instala dependencias de PHP con Composer
+# Instalar dependencias de Laravel
 RUN composer install --optimize-autoloader --no-dev --no-scripts
 
-# Da permisos a storage y bootstrap/cache
+# Permisos para las carpetas necesarias
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expone el puerto 80
+# Exponer el puerto 80
 EXPOSE 80
 
-# Comando para iniciar Apache en primer plano
+# Iniciar Apache en primer plano
 CMD ["apache2-foreground"]
