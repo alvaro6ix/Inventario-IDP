@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
 # Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
 
+# Copiar la configuración personalizada de Apache
+COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+
 # Copiar el código fuente al contenedor
 COPY . /var/www/html/
 
