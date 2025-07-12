@@ -1,49 +1,46 @@
-# Stage 1: Build assets con Node
-FROM node:18 AS node-builder
+# Etapa 1: Compilar assets
+FROM node:18 as node-builder
 
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm install
-
 COPY . .
 RUN npm run build
 
-# Stage 2: Servidor PHP con Apache y Composer
+# Etapa 2: Imagen final con PHP y Apache
 FROM php:8.2-apache
 
-# Instala dependencias necesarias, composer y extensiones PHP
+# Instalar dependencias necesarias
 RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    git \
-    unzip \
-    libzip-dev \
-    curl \
+    libpng-dev libjpeg-dev libfreetype6-dev \
+    zip unzip git curl libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql zip \
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    && docker-php-ext-install gd pdo_mysql zip
 
-# Habilita mod_rewrite
+# Activar mod_rewrite
 RUN a2enmod rewrite
 
-WORKDIR /var/www/html
+# Cambiar el root de Apache a /public
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/000-default.conf
 
-# Copia todo el código al contenedor
-COPY . .
+# Copiar el proyecto Laravel
+COPY . /var/www/html
 
-# Instala dependencias de PHP con Composer dentro del contenedor
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Copia assets compilados del builder node
+# Copiar assets ya compilados
 COPY --from=node-builder /app/public/build /var/www/html/public/build
 
-# Da permisos correctos
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Establecer directorio de trabajo
+WORKDIR /var/www/html
 
-# Expone puerto 80
+# Instalar dependencias PHP
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --optimize-autoloader
+
+# Asignar permisos correctos a Laravel
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 EXPOSE 80
-
 CMD ["apache2-foreground"]
