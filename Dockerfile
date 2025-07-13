@@ -33,6 +33,8 @@ RUN php artisan view:clear
 # 🔧 Regenera config y corre migraciones
 RUN php artisan config:cache
 RUN php artisan migrate --force
+RUN php artisan up
+
 
 # 📎 Enlaza storage y da permisos
 RUN php artisan storage:link
