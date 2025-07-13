@@ -20,7 +20,8 @@ RUN a2enmod rewrite
 COPY ./docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
 # 🌐 Copia el archivo .env si no está presente
-COPY .env.example .env
+COPY .env .env
+
 
 # 🎶 Instala dependencias de Laravel
 RUN composer install --no-dev --optimize-autoloader
