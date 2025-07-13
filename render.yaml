@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: inventario-idp
+    env: docker
+    repo: https://github.com/alvaro6ix/Inventario-IDP
+    branch: principal
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    rootDir: .
