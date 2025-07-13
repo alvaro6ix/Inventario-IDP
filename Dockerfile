@@ -19,20 +19,20 @@ RUN chown -R www-data:www-data /var/www/html
 RUN a2enmod rewrite
 COPY ./docker/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
-# 🌐 Copia el archivo .env si no está presente
-
-
 # 🎶 Instala dependencias de Laravel
 RUN composer install --no-dev --optimize-autoloader
 
 # 🎨 Compila frontend con Vite
 RUN npm install && npm run build
 
-# 🧠 Prepara config y migraciones
+# 🧹 Limpia caché vieja antes de regenerarla
+RUN php artisan config:clear
 RUN php artisan config:cache
+
+# 🧠 Corre migraciones
 RUN php artisan migrate --force
 
-# 📎 Enlaza storage y da permisos
+# 📎 Enlaza storage y da permisos finales
 RUN php artisan storage:link
 RUN chmod -R 775 storage bootstrap/cache
 RUN chown -R www-data:www-data storage bootstrap/cache
